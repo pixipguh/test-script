@@ -1,0 +1,84 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- Function to find the target dynamically
+local function getTarget()
+    local targetsFolder = workspace:FindFirstChild("Targets")
+    if targetsFolder then
+        return targetsFolder:FindFirstChild("Target")
+    end
+    return nil
+end
+
+-- Create GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 150, 0, 50)
+button.Position = UDim2.new(0.5, -75, 0.9, -25)
+button.BackgroundColor3 = Color3.new(0, 0, 0) -- Black background
+button.TextColor3 = Color3.new(1, 1, 1) -- White text
+button.Text = "Lock Camera"
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 18
+button.Parent = screenGui
+
+-- Rounded Corners
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 10) -- Adjust for roundness
+uiCorner.Parent = button
+
+local cameraLocked = false
+local connection
+
+local function setCameraLock(state)
+    local target = getTarget()
+
+    if not target then
+        warn("Target not found in workspace.Targets!")
+        return
+    end
+
+    cameraLocked = state
+    button.Text = cameraLocked and "Unlock Camera" or "Lock Camera"
+
+    if cameraLocked then
+        camera.CameraType = Enum.CameraType.Scriptable
+        connection = RunService.RenderStepped:Connect(function()
+            local target = getTarget()
+            if target then
+                camera.CFrame = CFrame.new(camera.CFrame.Position, target.Position)
+            else
+                warn("Target was removed!")
+                setCameraLock(false)
+            end
+        end)
+    else
+        if connection then connection:Disconnect() end
+        camera.CameraType = Enum.CameraType.Custom
+    end
+end
+
+-- Toggle Camera Lock via Button
+button.MouseButton1Click:Connect(function()
+    setCameraLock(not cameraLocked)
+end)
+
+-- Toggle Camera Lock via Right Mouse Button (Hold to Lock, Release to Unlock)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        setCameraLock(true)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        setCameraLock(false)
+
+    end
+end)
